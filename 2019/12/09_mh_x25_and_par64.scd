@@ -4,7 +4,7 @@
 // DMX configuration of the mhx25 moving head.
 ~mhx25 = {
 	(
-		internal_values: [0,0,0,0,0,0],
+		internal_values: [0,0,0,0,0,0,0,0,0,0,0,0],
 
 		colorDict:(
 			white: 0,
@@ -39,40 +39,57 @@
 			self.internal_values[1] = angle.linlin(0, 270, 0, 1);
 		},
 
+		rotSpeed: {|self, speed|
+			self.internal_values[4] = speed.linlin(0, 100, 1, 0);
+		},
+
+
+		fineX: {|self, value|
+			self.internal_values[2] = value.linlin(0, 100, 0, 1);
+		},
+
+		fineY: {|self, value|
+			self.internal_values[3] = value.linlin(0, 100, 0, 1);
+		},
+
+		color: {|self, colorName|
+			self.internal_values[5] = self.colorDict[colorName].linlin(0, 255, 0, 1);
+		},
+
+
 		on: {|self|
-			self.internal_values[3] = 5.linlin(0, 255, 0, 1);
+			self.internal_values[7] = 1;
+			self.internal_values[6] = 5.linlin(0, 255, 0, 1);
 		},
 
 		off: {|self|
-			self.internal_values[3] = 2.linlin(0, 255, 0, 1);
+			self.internal_values[7] = 0;
+			self.internal_values[6] = 2.linlin(0, 255, 0, 1);
 		},
 
 		// speed between 0-100, strobe effect
 		shutter: {|self, speed|
 			var sspeed = speed.linlin(0, 100, 15, 182);
-			self.internal_values[3] = sspeed.linlin(8, 215, 0, 1);
+			self.internal_values[6] = sspeed.linlin(8, 215, 0, 1);
 		},
 
-		color: {|self, colorName|
-			self.internal_values[2] = self.colorDict[colorName].linlin(0, 255, 0, 1);
-		},
 
 		gobo: {|self, goboName|
-			self.internal_values[4] = self.goboDict[goboName].linlin(0, 255, 0, 1);
+			self.internal_values[8] = self.goboDict[goboName].linlin(0, 255, 0, 1);
 		},
 
 		goboOff: {|self|
-			self.internal_values[4] = 0;
+			self.internal_values[8] = 0;
 		},
 
 		goboRot: {|self, value|
-			self.internal_values[5] = value.linlin(0, 255, 0, 1);
+			self.internal_values[9] = value.linlin(0, 255, 0, 1);
 		},
 
 		rainbow: {|self, speed|
 			// 128-191
 			var sspeed = speed.linlin(0, 100, 128, 191);
-			self.internal_values[2] = sspeed.linlin(0, 255, 0, 1);
+			self.internal_values[5] = sspeed.linlin(0, 255, 0, 1);
 		},
 	)
 };
@@ -149,8 +166,69 @@
 ~port = "/dev/ttyUSB0";
 
 // Here we create a controller with the objects instantiated in the block above.
-~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5]);
+//~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5]);
+~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2]);
 )
+
+
+(
+Tdef(\t, {
+	loop {
+		var y = 170+ rrand(-50, 50); //rrand(0, 250);
+		var x = 360+ rrand(-50, 50); // rrand(60+100, 60-100);
+		var x2 = x + rrand(-15, 15);
+		var y2 = y + rrand(-15, 15);
+
+		~mhx25_1.rotX(x);
+		~mhx25_1.rotY(y);
+		~mhx25_2.rotX(x2);
+		~mhx25_2.rotY(y2);
+		//1.wait;
+		/*inf.do {|i|
+			var sinX = (i*1).sin;
+			var sinY = (i*1.2).sin;
+			if (0.1.coin, { x = rrand(360+100, 360-100); });
+			//~mhx25_1.color(\green);
+
+			//~mhx25_2.color(\red);
+			//~mhx25_1.rotX(360 + (sinY*50).asInt) ;
+			//~mhx25_1.rotY(y+ (sinX*34).asInt);
+			//~mhx25_2.rotX(360 + (sinY*50).asInt) ;
+			//~mhx25_2.rotY(y2+ (sinX*34).asInt);
+
+			//~mhx25_1.rotY(y.gauss(10));
+			//~mhx25_1.rotX(x.gauss(10));*/
+
+		~mhx25_1.gobo(~mhx25_2.goboDict.keys.choose);
+		~mhx25_2.gobo(~mhx25_2.goboDict.keys.choose);
+		~controller.send;
+		// 0.4.rand.wait;
+	// };
+		10.rand.wait;
+	}
+}).play;
+)
+
+~mhx25_1.shutter(82);
+~mhx25_2.shutter(89)
+~mhx25_1.on;
+~mhx25_2.on
+
+~mhx25_1.dim(10);
+~mhx25_2.dim(10)
+
+~mhx25_1.goboOff
+~mhx25_1.gobo(~mhx25_2.goboDict.keys.choose);
+~mhx25_2.gobo(~mhx25_2.goboDict.keys.choose)
+
+~mhx25_1.gobo(\crystal);
+~mhx25_2.gobo(\crystal)
+
+~mhx25_1.goboRot(70);
+~mhx25_2.goboRot(160)
+~mhx25_1.rainbow(10)
+~mhx25_2.rainbow(60)
+
 
 
 (
@@ -209,12 +287,12 @@
 (
 Tdef(\shifting, {
 	loop {
-		~mhx25_1.rotX(10);
-		~mhx25_1.rotY(60);
+		~mhx25_1.rotX(rrand(0, 540));
+		~mhx25_1.rotY(rrand(0, 270));
 
-		~mhx25_2.rotX(10);
-		~mhx25_2.rotY(60);
 
+		~mhx25_2.rotX(rrand(0, 540));
+		~mhx25_2.rotY(rrand(0, 270));
 
 		~mhx25_1.shutter(rrand(80, 160));
 		~mhx25_2.shutter(rrand(60, 200));
@@ -252,7 +330,7 @@ Tdef(\shifting, {
 		~controller.send;
 		7.rand.wait;
 	}
-}).stop;
+}).play;
 )
 
 
