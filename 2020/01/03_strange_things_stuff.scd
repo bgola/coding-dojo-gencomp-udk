@@ -210,38 +210,53 @@ OSCdef(\speedReceiver,
 {|msg, time, addr, recvPort|
 		~mhx25_1.rotSpeed(msg[1]*100);
 		~controller.send;
-}, '/1/fader1');
+}, '/1/speedFader');
 
-OSCdef(\xReceiver,
+OSCdef(\xyReceiver,
 {|msg, time, addr, recvPort|
 		~mhx25_1.rotX(msg[1]*540);
+		~mhx25_1.rotY(msg[2]*270);
 		~controller.send;
-}, '/1/fader2');
+}, '/1/xy1');
 
-OSCdef(\yReceiver,
-{|msg, time, addr, recvPort|
-		~mhx25_1.rotY(msg[1]*270);
-		~controller.send;
-}, '/1/fader3');
 
 OSCdef(\toggleSequence1,
 {|msg, time, addr, recvPort|
 		if(msg[1] == 1.0, {Tdef(\explorer).play;}, {Tdef(\explorer).stop;});
 
-}, '/1/toggle1');
+}, '/1/toggle3');
 
-OSCdef(\toggleSequence2,
+OSCdef(\onOff,
 {|msg, time, addr, recvPort|
 		if(msg[1] == 1.0, {~mhx25_1.on;}, {~mhx25_1.off;});
 		~controller.send;
 
+}, '/1/toggle1');
+
+OSCdef(\shutter,
+{|msg, time, addr, recvPort|
+		if(msg[1] == 1.0, {~mhx25_1.shutter(100);}, {~mhx25_1.shutter(50);});
+		~controller.send;
+
 }, '/1/toggle2');
+
+OSCdef(\whiteButton,
+{|msg, time, addr, recvPort|
+		~mhx25_1.color(\white);
+		~controller.send;
+
+}, '/1/push1');
+OSCdef(\pinkButton,
+{|msg, time, addr, recvPort|
+		~mhx25_1.color(\pink);
+		~controller.send;
+
+}, '/1/push2');
 )
 
 (
 Tdef(\explorer, {
 	i = 0;
-	~mhx25_1.off;
 	while ( { i < 27 },
 	{
 			var z;
