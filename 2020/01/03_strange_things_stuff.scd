@@ -136,10 +136,7 @@
 
 ~pars = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6];
 ~mhxs = [~mhx25_1,~mhx25_2];
-)
 
-
-(
 // This function creates an object that represents the Enttec DMX USB Pro
 // device, it keeps track of all DMX devices connected.
 //
@@ -164,80 +161,34 @@
 };
 
 // On mac os X this is the port usually:
-//~port = "/dev/tty.usbserial-EN225291";
-//
-// On GNU/Linux it is:
-~port = "/dev/ttyUSB0";
+
+~port1 = "/dev/tty.usbserial-EN225291";
+~port2 = "/dev/ttyUSB0";
+~port = "";
+if(File.exists(~port1), {~port = ~port1; 1.postln;},{~port = ~port2; 2.postln;});
 
 // Here we create a controller with the objects instantiated in the block above.
 //~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5, ~par64_6]);
 //~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2]);
 ~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1,~par64_2,~par64_3,~par64_4,~par64_5, ~par64_6]);
-)
-
-EnttecDMX
-
-(12*2) + (7*6)
-
-(
-Tdef(\move, {
-	loop {
-		~pars.do {|par,i|
-			par.dim(5);
-			par.green(255.rand); par.red(255.rand); par.blue(255.rand);
-			~controller.send;
-			0.06.wait;
-			par.green(0); par.red(0); par.blue(0);
-		}
-	};
-}).play;
-)
-~par64_4.dim(10); ~controller.send
-
-(
-~par64_1.green(255);
-~par64_1.red(150);
-
-~par64_2.red(150);
-~par64_2.blue(150);
-~par64_3.blue(200);
-~par64_4.red(50);
-~par64_4.blue(150);
-~par64_1.strobe(0);
-~par64_2.strobe(0);
-~par64_3.strobe(0);
-~par64_4.strobe(0);
-~par64_5.strobe(0);
-
-//~par64_1.macro(10);
-//~par64_2.macro(rrand(0,15));
 
 
-~par64_1.dim(255);
-~par64_2.dim(255);
-~par64_3.dim(255);
-~par64_4.dim(255);
-~par64_5.dim(255);
-
-~controller.send;
-)
-
-
-
-(
 // OOOOSSSSSSCCCCCC receive values via touchosc
 OSCFunc.trace(true);
 
 OSCdef(\speedReceiver,
 {|msg, time, addr, recvPort|
 		~mhx25_1.rotSpeed(msg[1]*100);
+		~mhx25_2.rotSpeed(msg[1]*100);
 		~controller.send;
 }, '/1/speedFader');
 
 OSCdef(\xyReceiver,
 {|msg, time, addr, recvPort|
-		~mhx25_1.rotX(msg[1]*540);
-		~mhx25_1.rotY(msg[2]*270);
+		~mhx25_1.rotX(msg[1]*360);
+		~mhx25_1.rotY(msg[2]*180);
+		~mhx25_2.rotX(msg[1]*360);
+		~mhx25_2.rotY(msg[2]*180);
 		~controller.send;
 }, '/1/xy1');
 
@@ -245,12 +196,13 @@ OSCdef(\xyReceiver,
 OSCdef(\toggleSequence1,
 {|msg, time, addr, recvPort|
 		if(msg[1] == 1.0, {Tdef(\explorer).play;}, {Tdef(\explorer).stop;});
-
+		if(msg[1] == 1.0, {Tdef(\parmove).play;}, {Tdef(\parmove).stop;});
 }, '/1/toggle3');
 
 OSCdef(\onOff,
 {|msg, time, addr, recvPort|
 		if(msg[1] == 1.0, {~mhx25_1.on;}, {~mhx25_1.off;});
+		if(msg[1] == 1.0, {~mhx25_2.on;}, {~mhx25_2.off;});
 		~controller.send;
 
 }, '/1/toggle1');
@@ -258,6 +210,7 @@ OSCdef(\onOff,
 OSCdef(\shutter,
 {|msg, time, addr, recvPort|
 		if(msg[1] == 1.0, {~mhx25_1.shutter(100);}, {~mhx25_1.shutter(50);});
+		if(msg[1] == 1.0, {~mhx25_2.shutter(100);}, {~mhx25_2.shutter(50);});
 		~controller.send;
 
 }, '/1/toggle2');
@@ -265,15 +218,41 @@ OSCdef(\shutter,
 OSCdef(\whiteButton,
 {|msg, time, addr, recvPort|
 		~mhx25_1.color(\white);
+		~mhx25_2.color(\white);
 		~controller.send;
 
 }, '/1/push1');
 OSCdef(\pinkButton,
 {|msg, time, addr, recvPort|
 		~mhx25_1.color(\pink);
+		~mhx25_2.color(\pink);
 		~controller.send;
 
 }, '/1/push2');
+)
+
+
+
+(
+Tdef(\parmove, {
+	var delay = 5.0;
+	loop {
+
+		~pars.do {|par,i|
+			par.dim(100);
+			//par.green(255.rand); par.red(255.rand); par.blue(255.rand);
+			par.green(255); par.red(255); par.blue(255);
+			~controller.send;
+			delay.wait;
+			par.green(0); par.red(0); par.blue(0);
+			delay = delay - 0.3;
+			if(delay < 0.05, {delay = 0.05;},{});
+		}
+	};
+}).play;
+)
+(
+Tdef(\move).stop;
 )
 
 (
@@ -285,9 +264,14 @@ Tdef(\explorer, {
 			z = if ((i % 2) == 0, { 0 },{ 540 });
 			if (i > 10, { ~mhx25_1.on; },{});
 			if (i > 20, { ~mhx25_1.off; },{});
+			if (i > 10, { ~mhx25_2.on; },{});
+			if (i > 20, { ~mhx25_2.off; },{});
 			~mhx25_1.rotSpeed(i * 4);
 			~mhx25_1.rotX(z);
 			~mhx25_1.rotY(i * 10);
+			~mhx25_2.rotSpeed(i * 4);
+			~mhx25_2.rotX(z);
+			~mhx25_2.rotY(i * 10);
 			~controller.send;
 			2.5.wait;
 			i = i+1;
@@ -295,6 +279,65 @@ Tdef(\explorer, {
 
 }).play;
 )
+
+(
+Tdef(\mhxdance, {
+	// a couple of sequences, independent and independent after each other
+	var delay = 3;
+	loop {
+		~mhxs.do {|mhx|
+			mhx.rotX(0);
+			mhx.rotY(0);
+			mhx.rotSpeed(100);
+			~controller.send;
+		};
+		delay.wait;
+		~mhxs.do {|mhx|
+			mhx.rotX(360);
+			~controller.send;
+		};
+		delay.wait;
+		~mhxs.do {|mhx|
+			mhx.rotY(270);
+			~controller.send;
+		};
+		delay.wait;
+
+		i = 0;
+		while({i < 5},
+			{
+				~mhxs.do {|mhx|
+					mhx.rotX(540.rand);
+					mhx.rotY(270.rand);
+				};
+
+				~controller.send;
+				delay.wait;
+				i = i+1;
+			};
+		);
+		i = 0;
+		while({i < 5},
+			{
+				var randx = 540.rand;
+				var randy = 270.rand;
+				~mhxs.do {|mhx|
+					mhx.rotX(randx);
+					mhx.rotY(randy);
+				};
+
+				~controller.send;
+				delay.wait;
+				i = i+1;
+			};
+		);
+	};
+}).play;
+)
+(
+Tdef(\mhxdance).stop;
+)
+
 
 OSCdef(\fader4,
 {|msg, time, addr, recvPort|
@@ -363,8 +406,6 @@ Tdef(\tryingToBeOrganic, {|envir|
 }).play;
 )
 
-~mhx25_1.dim(3); ~controller.send
-~mhx25_1.on
 
 
 ~modes = [\explorer, \tryingToBeOrganic];
@@ -378,3 +419,62 @@ Tdef(\master, {
 		300.rand.wait;
 	};
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+~mhx25_1.dim(100); ~controller.send
+~mhx25_2.dim(100); ~controller.send
+~mhx25_1.on;
+~mhx25_2.on;
+~controller.send;
+
+~par64_4.dim(10); ~controller.send
+
+(
+~par64_1.green(255);
+~par64_1.red(150);
+
+~par64_2.red(150);
+~par64_2.blue(150);
+~par64_3.blue(200);
+~par64_4.red(50);
+~par64_4.blue(150);
+~par64_5.blue(150);
+~par64_6.blue(150);
+~par64_1.strobe(0);
+~par64_2.strobe(0);
+~par64_3.strobe(0);
+~par64_4.strobe(0);
+~par64_5.strobe(0);
+
+//~par64_1.macro(10);
+//~par64_2.macro(rrand(0,15));
+
+
+~par64_1.dim(255);
+~par64_2.dim(255);
+~par64_3.dim(255);
+~par64_4.dim(255);
+~par64_5.dim(255);
+
+~controller.send;
+)
+
