@@ -4,7 +4,7 @@
 // DMX configuration of the mhx25 moving head.
 ~mhx25 = {
 	(
-		internal_values: [0,0,0,0,0,0,0,0,0,0,0,0],
+		internal_values: [0,0,0,0,0,0,0,1,0,0,0,0],
 
 		colorDict:(
 			white: 0,
@@ -229,7 +229,7 @@ OSCdef(\pinkButton,
 		~controller.send;
 
 }, '/1/push2');
-)
+);
 
 
 
@@ -249,11 +249,8 @@ Tdef(\parmove, {
 			if(delay < 0.05, {delay = 0.05;},{});
 		}
 	};
-}).play;
-)
-(
-Tdef(\move).stop;
-)
+});
+);
 
 (
 Tdef(\explorer, {
@@ -278,7 +275,7 @@ Tdef(\explorer, {
 	});
 
 }).play;
-)
+);
 
 (
 Tdef(\mhxdance, {
@@ -332,12 +329,8 @@ Tdef(\mhxdance, {
 			};
 		);
 	};
-}).play;
-)
-(
-Tdef(\mhxdance).stop;
-)
-
+}).stop;
+);
 
 OSCdef(\fader4,
 {|msg, time, addr, recvPort|
@@ -347,19 +340,6 @@ OSCdef(\fader4,
 		Tdef(\test1).play;
 }, '/1/fader4');
 
-(
-Tdef(\test1, {|envir|
-	envir.postln;
-	~mhx25_1.off;
-	~mhx25_1.rotSpeed(envir.speed * 100);
-	~mhx25_1.rotX(envir.rotx * 540);
-	~mhx25_1.rotY(envir.roty * 270);
-	~controller.send;
-}).play;
-)
-
-		~mhx25_1.off; ~controller.send
- ~
 (
 Tdef(\tryingToBeOrganic).set(\repeats, 4);
 
@@ -403,78 +383,46 @@ Tdef(\tryingToBeOrganic, {|envir|
 		~mhx25_1.off; ~controller.send;
 		10.rand.wait;
 	};
+});
+);
+
+(
+Tdef(\ping, {
+	~pars.do {|l|
+		l.red(255); l.green(255); l.blue(255);
+	};
+	~mhxs.do {|l|
+		l.rotX(255.rand);
+		l.rotY(255.rand);
+		l.on;
+	};
+	~controller.send;
+	1.wait;
+	~pars.do {|l|
+		l.red(0); l.green(0); l.blue(0);
+	};
+	~mhxs.do {|l|
+		l.rotX(0);
+		l.rotY(0);
+		l.off;
+	};
+	~controller.send;
 }).play;
-)
+);
 
 
-
-~modes = [\explorer, \tryingToBeOrganic];
+~modes = [\explorer, \tryingToBeOrganic, \mhxdance];
 Tdef(\master, {
 	var mode = ~modes.choose;
+	2.wait;
 	loop {
+
+		("New mode is: " ++ mode).postln;
 		Tdef(mode).stop;
 		mode = ~modes.choose;
 		Tdef(mode).set(\repeats, 10.rand);
 		Tdef(mode).play;
-		300.rand.wait;
+		"Waiting for .... ".post;
+		(150 + 150.rand).postln.wait;
 	};
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-~mhx25_1.dim(100); ~controller.send
-~mhx25_2.dim(100); ~controller.send
-~mhx25_1.on;
-~mhx25_2.on;
-~controller.send;
-
-~par64_4.dim(10); ~controller.send
-
-(
-~par64_1.green(255);
-~par64_1.red(150);
-
-~par64_2.red(150);
-~par64_2.blue(150);
-~par64_3.blue(200);
-~par64_4.red(50);
-~par64_4.blue(150);
-~par64_5.blue(150);
-~par64_6.blue(150);
-~par64_1.strobe(0);
-~par64_2.strobe(0);
-~par64_3.strobe(0);
-~par64_4.strobe(0);
-~par64_5.strobe(0);
-
-//~par64_1.macro(10);
-//~par64_2.macro(rrand(0,15));
-
-
-~par64_1.dim(255);
-~par64_2.dim(255);
-~par64_3.dim(255);
-~par64_4.dim(255);
-~par64_5.dim(255);
-
-~controller.send;
-)
-
+}).play;
