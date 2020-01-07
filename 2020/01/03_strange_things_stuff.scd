@@ -58,15 +58,15 @@
 
 
 		on: {|self|
-			self.internal_values[7] = 1;
 			self.internal_values[6] = 5.linlin(0, 255, 0, 1);
 		},
 
 		off: {|self|
-			self.internal_values[7] = 0;
 			self.internal_values[6] = 2.linlin(0, 255, 0, 1);
 		},
-
+		dim: {|self, value|
+			self.internal_values[7] = value.linlin(0, 100, 0, 1);
+		},
 		// speed between 0-100, strobe effect
 		shutter: {|self, speed|
 			var sspeed = speed.linlin(0, 100, 15, 182);
@@ -160,10 +160,10 @@
 };
 
 // On mac os X this is the port usually:
-~port = "/dev/tty.usbserial-EN225291";
+//~port = "/dev/tty.usbserial-EN225291";
 //
 // On GNU/Linux it is:
-//~port = "/dev/ttyUSB0";
+~port = "/dev/ttyUSB0";
 
 // Here we create a controller with the objects instantiated in the block above.
 //~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5]);
@@ -293,8 +293,11 @@ Tdef(\test1, {|envir|
 }).play;
 )
 
-
+		~mhx25_1.off; ~controller.send
+ ~
 (
+Tdef(\tryingToBeOrganic).set(\repeats, 4);
+
 Tdef(\tryingToBeOrganic, {|envir|
 	envir.repeats.do {
 		var y = 170+ rrand(-50, 50); //rrand(0, 250);
@@ -302,14 +305,19 @@ Tdef(\tryingToBeOrganic, {|envir|
 		var x2 = x + rrand(-15, 15);
 		var y2 = y + rrand(-15, 15);
 
+		~mhx25_1.on;
+		~mhx25_1.color(~mhx25_1.colorDict.keys.choose);
+
+		~mhx25_1.dim(10);
 		~mhx25_1.rotX(x);
 		~mhx25_1.rotY(y);
 		~mhx25_2.rotX(x2);
 		~mhx25_2.rotY(y2);
 		//1.wait;
-		inf.do {|i|
+		100.rand.do {|i|
 			var sinX = (i*1).sin;
 			var sinY = (i*1.2).sin;
+			~mhx25_1.dim(1 + sinY*10);
 			if (0.1.coin, { x = rrand(360+100, 360-100); });
 			//~mhx25_1.color(\green);
 
@@ -327,10 +335,14 @@ Tdef(\tryingToBeOrganic, {|envir|
 			~controller.send;
 			0.4.rand.wait;
 		};
+		~mhx25_1.off; ~controller.send;
 		10.rand.wait;
 	};
 }).play;
 )
+
+~mhx25_1.dim(3); ~controller.send
+~mhx25_1.on
 
 
 ~modes = [\explorer, \tryingToBeOrganic];
