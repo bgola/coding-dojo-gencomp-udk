@@ -125,6 +125,13 @@
 // Creates two mhx25 objects
 ~mhx25_1 = ~mhx25.value();
 ~mhx25_2 = ~mhx25.value();
+~mhx25_2.rotX = {|self, angle|
+			self.internal_values[0] = angle.linlin(0, 540, 1, 0);
+		};
+
+~mhx25_2.rotY= {|self, angle|
+			self.internal_values[1] = angle.linlin(0, 270, 1, 0);
+		};
 
 // Creates five par64 objects
 ~par64_1 = ~par64.value();
@@ -176,6 +183,9 @@ if(File.exists(~port1), {~port = ~port1; 1.postln;},{~port = ~port2; 2.postln;})
 // OOOOSSSSSSCCCCCC receive values via touchosc
 OSCFunc.trace(true);
 
+~globalXoffset = 0;
+~globalYoffset = 0;
+
 OSCdef(\speedReceiver,
 {|msg, time, addr, recvPort|
 		~mhx25_1.rotSpeed(msg[1]*100);
@@ -185,13 +195,14 @@ OSCdef(\speedReceiver,
 
 OSCdef(\xyReceiver,
 {|msg, time, addr, recvPort|
+		var ox = rrand(~globalXoffset.neg, ~globalXoffset);
+		var oy = rrand(~globalYoffset.neg, ~globalYoffset);
 		~mhx25_1.rotX(msg[1]*360);
-		~mhx25_1.rotY(msg[2]*180);
-		~mhx25_2.rotX(msg[1]*360);
-		~mhx25_2.rotY(msg[2]*180);
+		~mhx25_1.rotY(msg[2]*270);
+		~mhx25_2.rotX(msg[1]*360 + ox);
+		~mhx25_2.rotY(msg[2]*270 + oy);
 		~controller.send;
 }, '/1/xy1');
-
 
 OSCdef(\toggleSequence1,
 {|msg, time, addr, recvPort|
@@ -204,7 +215,6 @@ OSCdef(\onOff,
 		if(msg[1] == 1.0, {~mhx25_1.on;}, {~mhx25_1.off;});
 		if(msg[1] == 1.0, {~mhx25_2.on;}, {~mhx25_2.off;});
 		~controller.send;
-
 }, '/1/toggle1');
 
 OSCdef(\shutter,
@@ -212,7 +222,6 @@ OSCdef(\shutter,
 		if(msg[1] == 1.0, {~mhx25_1.shutter(100);}, {~mhx25_1.shutter(50);});
 		if(msg[1] == 1.0, {~mhx25_2.shutter(100);}, {~mhx25_2.shutter(50);});
 		~controller.send;
-
 }, '/1/toggle2');
 
 OSCdef(\whiteButton,
@@ -220,15 +229,24 @@ OSCdef(\whiteButton,
 		~mhx25_1.color(\white);
 		~mhx25_2.color(\white);
 		~controller.send;
-
 }, '/1/push1');
+
 OSCdef(\pinkButton,
 {|msg, time, addr, recvPort|
 		~mhx25_1.color(\pink);
 		~mhx25_2.color(\pink);
 		~controller.send;
-
 }, '/1/push2');
+
+OSCdef(\xoffsetslider,
+{|msg, time, addr, recvPort|
+		~globalXoffset = msg[1] + 90;
+}, '/1/xoffset');
+
+OSCdef(\yoffsetslider,
+{|msg, time, addr, recvPort|
+		~globalYoffset = msg[1] + 90;
+}, '/1/yoffset');
 );
 
 
@@ -274,7 +292,7 @@ Tdef(\explorer, {
 			i = i+1;
 	});
 
-}).play;
+});
 );
 
 (
@@ -425,4 +443,4 @@ Tdef(\master, {
 		"Waiting for .... ".post;
 		(150 + 150.rand).postln.wait;
 	};
-}).play;
+});
