@@ -292,3 +292,55 @@ Tdef(\test1, {|envir|
 	~controller.send;
 }).play;
 )
+
+
+(
+Tdef(\tryingToBeOrganic, {|envir|
+	envir.repeats.do {
+		var y = 170+ rrand(-50, 50); //rrand(0, 250);
+		var x = 360+ rrand(-50, 50); // rrand(60+100, 60-100);
+		var x2 = x + rrand(-15, 15);
+		var y2 = y + rrand(-15, 15);
+
+		~mhx25_1.rotX(x);
+		~mhx25_1.rotY(y);
+		~mhx25_2.rotX(x2);
+		~mhx25_2.rotY(y2);
+		//1.wait;
+		inf.do {|i|
+			var sinX = (i*1).sin;
+			var sinY = (i*1.2).sin;
+			if (0.1.coin, { x = rrand(360+100, 360-100); });
+			//~mhx25_1.color(\green);
+
+			//~mhx25_2.color(\red);
+			~mhx25_1.rotX(360 + (sinY*50).asInt) ;
+			~mhx25_1.rotY(y+ (sinX*34).asInt);
+			~mhx25_2.rotX(360 + (sinY*50).asInt) ;
+			~mhx25_2.rotY(y2+ (sinX*34).asInt);
+
+			//~mhx25_1.rotY(y.gauss(10));
+			//~mhx25_1.rotX(x.gauss(10));*/
+
+		//~mhx25_1.gobo(~mhx25_2.goboDict.keys.choose);
+		//~mhx25_2.gobo(~mhx25_2.goboDict.keys.choose);
+			~controller.send;
+			0.4.rand.wait;
+		};
+		10.rand.wait;
+	};
+}).play;
+)
+
+
+~modes = [\explorer, \tryingToBeOrganic];
+Tdef(\master, {
+	var mode = ~modes.choose;
+	loop {
+		Tdef(mode).stop;
+		mode = ~modes.choose;
+		Tdef(mode).set(\repeats, 10.rand);
+		Tdef(mode).play;
+		300.rand.wait;
+	};
+});
