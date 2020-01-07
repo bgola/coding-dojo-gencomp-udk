@@ -132,6 +132,10 @@
 ~par64_3 = ~par64.value();
 ~par64_4 = ~par64.value();
 ~par64_5 = ~par64.value();
+~par64_6 = ~par64.value();
+
+~pars = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6];
+~mhxs = [~mhx25_1,~mhx25_2];
 )
 
 
@@ -166,11 +170,29 @@
 ~port = "/dev/ttyUSB0";
 
 // Here we create a controller with the objects instantiated in the block above.
-//~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5]);
-~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2]);
+//~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5, ~par64_6]);
+//~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2]);
+~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1,~par64_2,~par64_3,~par64_4,~par64_5, ~par64_6]);
 )
 
+EnttecDMX
 
+(12*2) + (7*6)
+
+(
+Tdef(\move, {
+	loop {
+		~pars.do {|par,i|
+			par.dim(5);
+			par.green(255.rand); par.red(255.rand); par.blue(255.rand);
+			~controller.send;
+			0.06.wait;
+			par.green(0); par.red(0); par.blue(0);
+		}
+	};
+}).play;
+)
+~par64_4.dim(10); ~controller.send
 
 (
 ~par64_1.green(255);
@@ -187,8 +209,8 @@
 ~par64_4.strobe(0);
 ~par64_5.strobe(0);
 
-~par64_1.macro(10);
-~par64_2.macro(rrand(0,15));
+//~par64_1.macro(10);
+//~par64_2.macro(rrand(0,15));
 
 
 ~par64_1.dim(255);
