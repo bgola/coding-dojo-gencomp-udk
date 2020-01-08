@@ -109,6 +109,11 @@
 		blue: {|self,dimBlue|
 			self.internal_values[2] = dimBlue.linlin(0, 255, 0, 1);
 		},
+		color: {|self, red, green, blue|
+			self.red(red);
+			self.green(green);
+			self.blue(blue);
+		},
 		macro: {|self,dimMacro|
 			self.internal_values[3] = dimMacro.linlin(0, 15, 0, 1);
 		},
@@ -136,6 +141,8 @@
 
 ~pars = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6];
 ~mhxs = [~mhx25_1,~mhx25_2];
+~parg1 = [~par64_1,~par64_2,~par64_3];
+~parg2 = [~par64_4,~par64_5,~par64_6];
 
 // This function creates an object that represents the Enttec DMX USB Pro
 // device, it keeps track of all DMX devices connected.
@@ -231,7 +238,7 @@ OSCdef(\pinkButton,
 }, '/1/push2');
 );
 
-
+~globalDim = 10;
 
 (
 Tdef(\parmove, {
@@ -239,7 +246,7 @@ Tdef(\parmove, {
 	loop {
 
 		~pars.do {|par,i|
-			par.dim(100);
+			par.dim(~globalDim);
 			//par.green(255.rand); par.red(255.rand); par.blue(255.rand);
 			par.green(255); par.red(255); par.blue(255);
 			~controller.send;
@@ -251,6 +258,29 @@ Tdef(\parmove, {
 	};
 });
 );
+
+
+Tdef(\pargroups, {
+	100.do {|i|
+		~parg1.do {|par|
+			par.color(0, 255, 0);
+		};
+		~controller.send;
+		((100-i)/140.0).wait;
+		~parg1.do {|par|
+			par.color(0, 0, 0);
+		};
+		~parg2.do {|par|
+			par.color(0, 255, 0);
+		};
+		~controller.send;
+		((100-i)/140.0).wait;
+		~parg2.do {|par|
+			par.color(0, 0, 0);
+		};
+		~controller.send;
+	}
+});
 
 (
 Tdef(\explorer, {
@@ -274,7 +304,7 @@ Tdef(\explorer, {
 			i = i+1;
 	});
 
-}).play;
+});
 );
 
 (
@@ -388,6 +418,7 @@ Tdef(\tryingToBeOrganic, {|envir|
 
 (
 Tdef(\ping, {
+	"starting ping".postln;
 	~pars.do {|l|
 		l.red(255); l.green(255); l.blue(255);
 	};
@@ -398,8 +429,9 @@ Tdef(\ping, {
 	};
 	~controller.send;
 	1.wait;
+	"now turn it off".postln;
 	~pars.do {|l|
-		l.red(0); l.green(0); l.blue(0);
+		l.color(0,0,0);
 	};
 	~mhxs.do {|l|
 		l.rotX(0);
@@ -416,7 +448,6 @@ Tdef(\master, {
 	var mode = ~modes.choose;
 	2.wait;
 	loop {
-
 		("New mode is: " ++ mode).postln;
 		Tdef(mode).stop;
 		mode = ~modes.choose;
@@ -425,4 +456,22 @@ Tdef(\master, {
 		"Waiting for .... ".post;
 		(150 + 150.rand).postln.wait;
 	};
-}).play;
+});
+
+
+Tdef(\parOrder, {
+	var color;
+	~pars.do {|par|
+		par.color(0,0,0);
+
+		~controller.send;
+	};
+	10.do {
+		~pars.do {|par|
+			par.color(255, 0, 0);
+			~controller.send;
+			0.1.wait;
+			par.color(0, 0, 0);
+		};
+	};
+});
