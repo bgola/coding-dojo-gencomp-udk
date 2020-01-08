@@ -1,7 +1,7 @@
 moving head 1   1
 moving head 2   13
 led 1           25 - 100110
-led 2           32 - 100000
+led 2           32 - 000001
 led 3           39 - 111001
 led 4           46 - 011101
 led 5           53 - 101011
