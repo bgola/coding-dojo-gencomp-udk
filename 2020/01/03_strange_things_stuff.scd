@@ -131,12 +131,12 @@
 ~mhx25_1 = ~mhx25.value();
 ~mhx25_2 = ~mhx25.value();
 ~mhx25_2.rotX = {|self, angle|
-			self.internal_values[0] = angle.linlin(0, 540, 1, 0);
-		};
+	self.internal_values[0] = angle.linlin(0, 540, 1, 0);
+};
 
 ~mhx25_2.rotY= {|self, angle|
-			self.internal_values[1] = angle.linlin(0, 270, 1, 0);
-		};
+	self.internal_values[1] = angle.linlin(0, 270, 1, 0);
+};
 
 // Creates five par64 objects
 ~par64_1 = ~par64.value();
@@ -147,7 +147,10 @@
 ~par64_6 = ~par64.value();
 
 ~pars = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6];
+~pars8 = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6, ~par64_4];
+
 ~mhxs = [~mhx25_1,~mhx25_2];
+
 ~parg1 = [~par64_1,~par64_2,~par64_3];
 ~parg2 = [~par64_4,~par64_5,~par64_6];
 
@@ -188,7 +191,7 @@ if(File.exists(~port1), {~port = ~port1; 1.postln;},{~port = ~port2; 2.postln;})
 
 
 // OOOOSSSSSSCCCCCC receive values via touchosc
-OSCFunc.trace(true);
+OSCFunc.trace(false);
 
 ~globalXoffset = 0;
 ~globalYoffset = 0;
@@ -199,6 +202,63 @@ OSCdef(\speedReceiver,
 		~mhx25_2.rotSpeed(msg[1]*100);
 		~controller.send;
 }, '/1/speedFader');
+
+
+OSCdef(\Dy,
+{|msg, time, addr, recvPort|
+		var ox = rrand(~globalXoffset.neg, ~globalXoffset);
+		var oy = rrand(~globalYoffset.neg, ~globalYoffset);
+		~mhx25_1.rotY(msg[1]*270);
+		~mhx25_2.rotY(msg[1]*270 + oy);
+		~controller.send;
+}, '/oscControl/slider2Dy');
+
+OSCdef(\Dx,
+{|msg, time, addr, recvPort|
+		var ox = rrand(~globalXoffset.neg, ~globalXoffset);
+		var oy = rrand(~globalYoffset.neg, ~globalYoffset);
+		~mhx25_1.rotX(msg[1]*540);
+		~mhx25_2.rotX(msg[1]*540 + oy);
+		~controller.send;
+}, '/oscControl/slider2Dx');
+
+OSCdef(\onoff,
+{|msg, time, addr, recvPort|
+		if (msg[1] == 1, {
+			~mhx25_1.on;
+		}, {
+			~mhx25_2.off;
+		});
+		~controller.send;
+}, '/oscControl/gridToggle1');
+
+OSCdef(\dim,
+{|msg, time, addr, recvPort|
+		~mhx25_1.dim(msg[1]*100);
+		~mhx25_2.dim(msg[1]*100);
+		~controller.send;
+}, '/oscControl/slider1');
+
+OSCdef(\red,
+{|msg, time, addr, recvPort|
+		~mhx25_1.red(msg[1]*255);
+		~mhx25_2.red(msg[1]*255);
+		~controller.send;
+}, '/oscControl/slider2');
+
+OSCdef(\green,
+{|msg, time, addr, recvPort|
+		~mhx25_1.green(msg[1]*255);
+		~mhx25_2.green(msg[1]*100);
+		~controller.send;
+}, '/oscControl/slider3');
+
+OSCdef(\blue,
+{|msg, time, addr, recvPort|
+		~mhx25_1.blue(msg[1]*255);
+		~mhx25_2.blue(msg[1]*255);
+		~controller.send;
+}, '/oscControl/slider4');
 
 OSCdef(\xyReceiver,
 {|msg, time, addr, recvPort|
@@ -256,17 +316,17 @@ OSCdef(\yoffsetslider,
 }, '/1/yoffset');
 );
 
-~globalDim = 10;
+~globalDim = 5;
 
 (
 Tdef(\parmove, {
 	var delay = 5.0;
 	loop {
 
-		~pars.do {|par,i|
-			par.dim(~globalDim);
+		~pars8.do {|par,i|
+			//par.dim(~globalDim);
 			//par.green(255.rand); par.red(255.rand); par.blue(255.rand);
-			par.green(255); par.red(255); par.blue(255);
+			par.green(255); par.red(0); par.blue(0);
 			~controller.send;
 			delay.wait;
 			par.green(0); par.red(0); par.blue(0);
@@ -277,6 +337,129 @@ Tdef(\parmove, {
 });
 );
 
+
+Tdef(\rgb, {
+	~parg1[0].color(255, 0, 0);
+	~parg2[0].color(255, 0, 0);
+
+	~parg1[1].color(0, 255, 0);
+	~parg2[1].color(0, 255, 0);
+
+	~parg1[2].color(0, 0, 255);
+	~parg2[2].color(0, 0, 255);
+
+	~controller.send;
+});
+
+
+Tdef(\rgbRotate, {
+	inf.do {|i|
+ 		~parg1[i%3].color(255, 0, 0);
+		~parg2[i%3].color(255, 0, 0);
+
+		~parg1[(i+1)%3].color(0, 255, 0);
+		~parg2[(i+1)%3].color(0, 255, 0);
+
+		~parg1[(i+2)%3].color(0, 0, 255);
+		~parg2[(i+2)%3].color(0, 0, 255);
+
+		~controller.send;
+		1.wait;
+	}
+});
+
+
+Tdef(\rgbFadeGroups, {
+	inf.do {|i|
+		var c;
+		c = Color.hsv((i/40.0) % 1, 1, 1, 1);
+		~parg1[0].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+		~parg2[0].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+
+		c = Color.hsv(((i+2)/40.0) % 1, 1, 1, 1);
+		~parg1[1].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+		~parg2[1].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+
+		c = Color.hsv(((i+4)/40.0) % 1, 1, 1, 1);
+ 		~parg1[2].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+		~parg2[2].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+
+		~controller.send;
+		0.1.wait;
+	}
+});
+
+Tdef(\rgbFade, {
+	inf.do {|i|
+		var c;
+		~pars8.do {|par,j|
+			var fade = ((((i+(j*4))*0.001) - 1).abs / 40.0) % 1;
+			c = Color.hsv(((i+(j*2))/40.0) % 1, 1, 0.5, 1);
+			par.color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+		};
+		~controller.send;
+		0.05.wait;
+	}
+});
+
+
+Tdef(\rgbFade8, {
+	inf.do {|i|
+		var c;
+		/*~pars8[((i/20)-3)%7].color(0, ((((i-6)%20)/19) * 255), 0);
+		~pars8[((i/20)-2)%7].color(0, ((((i-3)%20)/19) * 255), 0);
+		~pars8[((i/20)-1)%7].color(0, ((((i-1)%20)/19) * 255), 0);*/
+		~pars8[(i/20)%7].color(0, 255 - (((i%20)/19) * 255), 0);
+		~pars8[((i/20)+1)%7].color(0, (((i%20)/19) * 255), 0);
+		~controller.send;
+		0.05.wait;
+	}
+});
+
+// 1000.collect{|i|120-((i*0.01 + ((2*5)*0.1)).sin.abs*120)}.plot
+
+Tdef(\rgbFadeGreen, {
+	inf.do {|i|
+		var c;
+		~pars.do {|par,j|
+			par.color(0, 120-((i*0.01 + ((j)*0.1)).sin.abs*120), 0);
+		};
+		~controller.send;
+		0.05.wait;
+	}
+});
+
+Tdef(\dialog, {
+	loop {
+		~mhx25_1.dim(5);
+		~mhx25_2.dim(5);
+		10.do {
+			~mhx25_1.rotX([rrand(0, 200), rrand(340, 540)].choose);
+			~mhx25_1.rotY([rrand(0, 100), rrand(170, 270)].choose);
+			~mhx25_1.shutter(10.rand);
+			~mhx25_2.rotX(540.rand);
+			~mhx25_2.rotY(270.rand);
+			~mhx25_1.shutter(10.rand);
+			~controller.send;
+			rrand(0.2,3.0).wait;
+		};
+
+		~mhx25_1.rotX(270);
+		~mhx25_1.rotY(135);
+		~mhx25_2.rotX(270);
+		~mhx25_2.rotY(135);
+		~controller.send;
+		1.wait;
+		~mhx25_1.shutter(rrand(89, 95));
+		~mhx25_2.shutter(rrand(89, 95));
+		~controller.send;
+		rrand(1,6).wait;
+		~mhx25_1.off;
+		~mhx25_2.off;
+		~controller.send;
+		rrand(10, 60).wait;
+	};
+});
 
 Tdef(\pargroups, {
 	100.do {|i|
@@ -401,7 +584,6 @@ Tdef(\tryingToBeOrganic, {|envir|
 		~mhx25_1.on;
 		~mhx25_1.color(~mhx25_1.colorDict.keys.choose);
 
-		~mhx25_1.dim(10);
 		~mhx25_1.rotX(x);
 		~mhx25_1.rotY(y);
 		~mhx25_2.rotX(x2);
@@ -410,7 +592,6 @@ Tdef(\tryingToBeOrganic, {|envir|
 		100.rand.do {|i|
 			var sinX = (i*1).sin;
 			var sinY = (i*1.2).sin;
-			~mhx25_1.dim(1 + sinY*10);
 			if (0.1.coin, { x = rrand(360+100, 360-100); });
 			//~mhx25_1.color(\green);
 
@@ -461,20 +642,21 @@ Tdef(\ping, {
 );
 
 
-~modes = [\explorer, \tryingToBeOrganic, \mhxdance];
+~modes = [\explorer, \tryingToBeOrganic, \mhxdance, \dialog, \ping];
 Tdef(\master, {
 	var mode = ~modes.choose;
 	2.wait;
 	loop {
+		~mhxs.do {|l| l.dim(~globalDim) }; ~controller.send
 		("New mode is: " ++ mode).postln;
 		Tdef(mode).stop;
 		mode = ~modes.choose;
 		Tdef(mode).set(\repeats, 10.rand);
 		Tdef(mode).play;
 		"Waiting for .... ".post;
-		(150 + 150.rand).postln.wait;
+		(100 + 100.rand).postln.wait;
 	};
-});
+}).play;
 
 Tdef(\parOrder, {
 	var color;
@@ -487,7 +669,7 @@ Tdef(\parOrder, {
 		~pars.do {|par|
 			par.color(255, 0, 0);
 			~controller.send;
-			0.1.wait;
+			0.5.wait;
 			par.color(0, 0, 0);
 		};
 	};
