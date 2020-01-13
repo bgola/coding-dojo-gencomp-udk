@@ -226,11 +226,13 @@ OSCdef(\onoff,
 {|msg, time, addr, recvPort|
 		if (msg[1] == 1, {
 			~mhx25_1.on;
+			~mhx25_2.on;
 		}, {
+			~mhx25_1.off;
 			~mhx25_2.off;
 		});
 		~controller.send;
-}, '/oscControl/gridToggle1');
+}, '/oscControl/toggle1');
 
 OSCdef(\dim,
 {|msg, time, addr, recvPort|
@@ -239,17 +241,18 @@ OSCdef(\dim,
 		~controller.send;
 }, '/oscControl/slider1');
 
-OSCdef(\red,
+OSCdef(\hue,
 {|msg, time, addr, recvPort|
-		~mhx25_1.red(msg[1]*255);
-		~mhx25_2.red(msg[1]*255);
-		~controller.send;
+		var hue, colors;
+		colors = [\red, \yellow, \yellowGreen, \green, \lightBlue, \darkBlue, \violet, \pink];
+		~globalHue = msg[1];
+		hue = (~globalHue*8).abs;
+		~mhxs.do {|m| m.color(colors[hue])};
 }, '/oscControl/slider2');
 
-OSCdef(\green,
+OSCdef(\strobe,
 {|msg, time, addr, recvPort|
-		~mhx25_1.green(msg[1]*255);
-		~mhx25_2.green(msg[1]*100);
+		~pars.do{|par|par.strobe(msg[1]*255)};
 		~controller.send;
 }, '/oscControl/slider3');
 
@@ -351,6 +354,20 @@ Tdef(\rgb, {
 	~controller.send;
 });
 
+Tdef(\rgbStrobe, {
+	~parg1[0].color(255, 0, 0);
+	~parg2[0].color(255, 0, 0);
+
+	~parg1[1].color(0, 255, 0);
+	~parg2[1].color(0, 255, 0);
+
+	~parg1[2].color(0, 0, 255);
+	~parg2[2].color(0, 0, 255);
+
+	~pars.do {|p|p.strobe(rrand(93,98))};
+	~controller.send;
+});
+
 
 Tdef(\rgbRotate, {
 	inf.do {|i|
@@ -403,14 +420,23 @@ Tdef(\rgbFade, {
 });
 
 
+Tdef(\rgbHueOscillate, {
+	loop {
+		~globalHue = (~globalHue + 0.0005) % 0.999;
+		0.05.wait;
+	};
+});
+
 Tdef(\rgbFade8, {
+	var sp = rrand(10, 20);
+	Tdef(\rgbHueOscillate).play;
 	inf.do {|i|
-		var c;
-		/*~pars8[((i/20)-3)%7].color(0, ((((i-6)%20)/19) * 255), 0);
-		~pars8[((i/20)-2)%7].color(0, ((((i-3)%20)/19) * 255), 0);
-		~pars8[((i/20)-1)%7].color(0, ((((i-1)%20)/19) * 255), 0);*/
-		~pars8[(i/20)%7].color(0, 255 - (((i%20)/19) * 255), 0);
-		~pars8[((i/20)+1)%7].color(0, (((i%20)/19) * 255), 0);
+		var c1 = Color.hsv(~globalHue, 1, 1 - ((i%sp)/(sp-1)));
+		var c2 = Color.hsv(~globalHue, 1, ((i%sp)/(sp-1)));
+		//~pars8[(i/15)%7].color(0, 255 - (((i%15)/14) * 255), 0);
+		//~pars8[((i/15)+1)%7].color(0, (((i%15)/14) * 255), 0);
+		~pars8[(i/sp)%7].color(c1.red*255, c1.green*255, c1.blue*255);
+		~pars8[((i/sp)+1)%7].color(c2.red*255, c2.green*255, c2.blue*255);
 		~controller.send;
 		0.05.wait;
 	}
@@ -428,6 +454,19 @@ Tdef(\rgbFadeGreen, {
 		0.05.wait;
 	}
 });
+
+~globalHue = 0.5;
+Tdef(\rgbFadeColors, {
+	inf.do {|i|
+		var c;
+		~pars.do {|par,j|
+			c = Color.hsv(~globalHue, 1.0, (1-((i*0.01 + ((j)*0.3)).sin).abs));
+			par.color(c.red * 255, c.green * 255, c.blue * 255);
+		};
+		~controller.send;
+		0.05.wait;
+	}
+}).play;
 
 Tdef(\dialog, {
 	loop {
@@ -571,6 +610,87 @@ OSCdef(\fader4,
 		Tdef(\test1).play;
 }, '/1/fader4');
 
+Tdef(\perfMode, {
+	"Starting performance mode...".postln;
+	Tdef.all.reject({|t| t.key == \perfMode}).do { |t| t.stop; };
+	1.wait;
+	6.do {
+		"... next player".postln;
+		Tdef.all.reject({|t| t.key == \perfMode}).do { |t| t.stop; };
+		0.2.wait;
+		~mhxs.do { |m| m.on; m.dim(100); };
+		Tdef(\startTheAlarm).play;
+		Tdef(\movingHeadsGoNuts).play;
+		6.wait;
+		Tdef(\startTheAlarm).stop;
+		Tdef(\movingHeadsGoNuts).stop;
+		~globalHue = rrand(0.0, 0.99999);
+		Tdef(~ledmodes.choose).play;
+		~mhxs.do { |m| m.on; m.dim(100); m.color(\white); };
+		((60 * 3)-6).wait;
+		Tdef(\dialog).stop;
+	};
+	Tdef(\startTheAlarm).play;
+	Tdef(\movingHeadsGoNuts).play;
+	6.wait;
+	Tdef(\startTheAlarm).stop;
+	Tdef(\movingHeadsGoNuts).stop;
+	1.wait;
+	"And we are done!!!!".postln;
+	Tdef(\black).play;
+});
+
+Quant.default.quant = nil;
+
+Tdef(\startTheAlarm, {
+	var c, hue;
+	var colors = [\red, \yellow, \yellowGreen, \green, \lightBlue, \darkBlue, \violet, \pink];
+
+	~pars.do {|par|
+		par.strobe(rrand(215, 255));
+		c = [Color(rrand(125, 255), 0, 0), Color(0, rrand(125, 255), 0)][2.rand];
+		par.color(c.red, c.green, c.blue);
+	};
+	~mhx25_1.color(\red);
+	~mhx25_2.color(\green);
+	~controller.send;
+
+	5.wait;
+	~pars.do {|par|
+		par.strobe(0);
+	};
+	hue = (~globalHue*8).abs;
+	~mhxs.do {|m| m.color(colors[hue])};
+	~controller.send;
+});
+
+Tdef(\movingHeadsGoNuts, {
+	loop {
+		~mhxs.do {|m|
+			m.on;
+			m.rotSpeed(100);
+			m.rotX(rrand(0, 100));
+			m.rotY(rrand(0, 50));
+		};
+		rrand(0.4, 1.4).wait;
+		~controller.send;
+		~mhxs.do {|m|
+			m.rotSpeed(100);
+			m.rotX(rrand(440, 540));
+			m.rotY(rrand(220, 270));
+		};
+		rrand(0.4, 1.4).wait;
+		~controller.send;
+	};
+});
+
+Tdef(\black, {
+	Tdef.all.do {|t| t.stop };
+	~pars.do {|p|p.color(0,0,0)};
+	~mhxs.do {|m|m.rotX(540 / 2); m.rotY(270/2); m.on; m.color(\white); m.shutter(rrand(50,70))};
+	~controller.send;
+});
+
 (
 Tdef(\tryingToBeOrganic).set(\repeats, 4);
 
@@ -581,8 +701,8 @@ Tdef(\tryingToBeOrganic, {|envir|
 		var x2 = x + rrand(-15, 15);
 		var y2 = y + rrand(-15, 15);
 
-		~mhx25_1.on;
-		~mhx25_1.color(~mhx25_1.colorDict.keys.choose);
+		//~mhx25_1.on;
+		//~mhx25_1.color(~mhx25_1.colorDict.keys.choose);
 
 		~mhx25_1.rotX(x);
 		~mhx25_1.rotY(y);
@@ -642,12 +762,13 @@ Tdef(\ping, {
 );
 
 
+~ledmodes = [\rgbFadeColors, \rgbFade8, \rgbStrobe];
 ~modes = [\explorer, \tryingToBeOrganic, \mhxdance, \dialog, \ping];
 Tdef(\master, {
 	var mode = ~modes.choose;
 	2.wait;
 	loop {
-		~mhxs.do {|l| l.dim(~globalDim) }; ~controller.send
+		~mhxs.do {|l| l.dim(~globalDim) }; ~controller.send;
 		("New mode is: " ++ mode).postln;
 		Tdef(mode).stop;
 		mode = ~modes.choose;
