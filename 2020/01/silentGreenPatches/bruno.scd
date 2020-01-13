@@ -1,7 +1,6 @@
 // Silly way to load files to an array
 s.boot;
 
-
 b = [];
 b = b.add([Buffer.read(s, "/home/bgola/workspace/samples/dmxkrew/mag01.wav"), nil]);
 b = b.add([Buffer.read(s, "/home/bgola/workspace/samples/dmxkrew/mag02.wav"), nil]);
