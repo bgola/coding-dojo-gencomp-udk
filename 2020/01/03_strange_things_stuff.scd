@@ -57,12 +57,13 @@
 		},
 
 
-		on: {|self|
+		shutterOpen: {|self|
 			self.internal_values[6] = 5.linlin(0, 255, 0, 1);
 		},
 
-		off: {|self|
-			self.internal_values[6] = 2.linlin(0, 255, 0, 1);
+		shutterClose: {|self|
+			"turning off".postln;
+			self.internal_values[6] = 0.linlin(0, 255, 0, 1);
 		},
 		dim: {|self, value|
 			self.internal_values[7] = value.linlin(0, 100, 0, 1);
@@ -126,17 +127,24 @@
 		},
 )};
 
+~fog = {
+	(
+		internal_values: [0],
+		fog: {|self, value| self.internal_values[0] = value};
+	);
+};
 
 // Creates two mhx25 objects
 ~mhx25_1 = ~mhx25.value();
 ~mhx25_2 = ~mhx25.value();
-~mhx25_2.rotX = {|self, angle|
+~globalHue = 0.4;
+/*~mhx25_2.rotX = {|self, angle|
 	self.internal_values[0] = angle.linlin(0, 540, 1, 0);
 };
 
 ~mhx25_2.rotY= {|self, angle|
 	self.internal_values[1] = angle.linlin(0, 270, 1, 0);
-};
+};*/
 
 // Creates five par64 objects
 ~par64_1 = ~par64.value();
@@ -145,14 +153,16 @@
 ~par64_4 = ~par64.value();
 ~par64_5 = ~par64.value();
 ~par64_6 = ~par64.value();
-
-~pars = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6];
+~par64_7 = ~par64.value();
+~par64_8 = ~par64.value();
+~pars = [~par64_1,~par64_2,~par64_4,~par64_5,~par64_3,~par64_6,~par64_7,~par64_8];
 ~pars8 = [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5,~par64_6, ~par64_4];
 
 ~mhxs = [~mhx25_1,~mhx25_2];
 
 ~parg1 = [~par64_1,~par64_2,~par64_3];
 ~parg2 = [~par64_4,~par64_5,~par64_6];
+~fog1 = ~fog.value;
 
 // This function creates an object that represents the Enttec DMX USB Pro
 // device, it keeps track of all DMX devices connected.
@@ -187,7 +197,8 @@ if(File.exists(~port1), {~port = ~port1; 1.postln;},{~port = ~port2; 2.postln;})
 // Here we create a controller with the objects instantiated in the block above.
 //~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1, ~par64_2, ~par64_3, ~par64_4, ~par64_5, ~par64_6]);
 //~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2]);
-~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1,~par64_2,~par64_3,~par64_4,~par64_5, ~par64_6]);
+//~controller = ~dmx_controller.value(~port, [~mhx25_1, ~mhx25_2, ~par64_1,~par64_2,~par64_3,~par64_4,~par64_5, ~par64_6]);
+~controller = ~dmx_controller.value(~port, [~par64_1,~par64_2,~par64_3,~par64_4,~par64_5, ~par64_6, ~mhx25_1, ~mhx25_2,~par64_7,~par64_8, ~fog1]);
 
 
 // OOOOSSSSSSCCCCCC receive values via touchosc
@@ -225,11 +236,11 @@ OSCdef(\Dx,
 OSCdef(\onoff,
 {|msg, time, addr, recvPort|
 		if (msg[1] == 1, {
-			~mhx25_1.on;
-			~mhx25_2.on;
+			~mhx25_1.shutterOpen;
+			~mhx25_2.shutterOpen;
 		}, {
-			~mhx25_1.off;
-			~mhx25_2.off;
+			~mhx25_1.shutterClose;
+			~mhx25_2.shutterClose;
 		});
 		~controller.send;
 }, '/oscControl/toggle1');
@@ -282,8 +293,8 @@ OSCdef(\toggleSequence1,
 
 OSCdef(\onOff,
 {|msg, time, addr, recvPort|
-		if(msg[1] == 1.0, {~mhx25_1.on;}, {~mhx25_1.off;});
-		if(msg[1] == 1.0, {~mhx25_2.on;}, {~mhx25_2.off;});
+		if(msg[1] == 1.0, {~mhx25_1.shutterOpen;}, {~mhx25_1.shutterClose;});
+		if(msg[1] == 1.0, {~mhx25_2.shutterOpen;}, {~mhx25_2.shutterClose;});
 		~controller.send;
 }, '/1/toggle1');
 
@@ -364,10 +375,9 @@ Tdef(\rgbStrobe, {
 	~parg1[2].color(0, 0, 255);
 	~parg2[2].color(0, 0, 255);
 
-	~pars.do {|p|p.strobe(rrand(93,98))};
+	~pars.do { |p| p.strobe(rrand(93,98)) };
 	~controller.send;
-});
-
+}).stop;
 
 Tdef(\rgbRotate, {
 	inf.do {|i|
@@ -383,21 +393,32 @@ Tdef(\rgbRotate, {
 		~controller.send;
 		1.wait;
 	}
-});
-
+}).stop;
 
 Tdef(\rgbFadeGroups, {
 	inf.do {|i|
 		var c;
-		c = Color.hsv((i/40.0) % 1, 1, 1, 1);
-		~parg1[0].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
-		~parg2[0].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+		c = Color.hsv((i%40).linlin(0, 39, 0, 1), 1, 1);
+		~parg1[0].color(
+			c.red.linlin(0,1,0,255),
+			c.green.linlin(0,1,0,255),
+			c.blue.linlin(0,1,0,255));
+		~parg2[0].color(
+			c.red.linlin(0,1,0,255),
+			c.green.linlin(0,1,0,255),
+			c.blue.linlin(0,1,0,255));
 
-		c = Color.hsv(((i+2)/40.0) % 1, 1, 1, 1);
-		~parg1[1].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
-		~parg2[1].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+		c = Color.hsv(((i+2)/40.0) % 1, 1, 1);
+		~parg1[1].color(
+			c.red.linlin(0,1,0,255),
+			c.green.linlin(0,1,0,255),
+			c.blue.linlin(0,1,0,255));
+		~parg2[1].color(
+			c.red.linlin(0,1,0,255),
+			c.green.linlin(0,1,0,255),
+			c.blue.linlin(0,1,0,255));
 
-		c = Color.hsv(((i+4)/40.0) % 1, 1, 1, 1);
+		c = Color.hsv(((i+4)/40.0) % 1, 1, 1);
  		~parg1[2].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
 		~parg2[2].color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
 
@@ -406,13 +427,16 @@ Tdef(\rgbFadeGroups, {
 	}
 });
 
-Tdef(\rgbFade, {
+Tdef(\rgbFadeColor, {
 	inf.do {|i|
 		var c;
-		~pars8.do {|par,j|
-			var fade = ((((i+(j*4))*0.001) - 1).abs / 40.0) % 1;
+		~pars.do {|par, j|
 			c = Color.hsv(((i+(j*2))/40.0) % 1, 1, 0.5, 1);
-			par.color(c.red.linlin(0,1,0,255), c.green.linlin(0,1,0,255), c.blue.linlin(0,1,0,255));
+
+			par.color(
+				c.red.linlin(0,1,0,255),
+				c.green.linlin(0,1,0,255),
+				c.blue.linlin(0,1,0,255));
 		};
 		~controller.send;
 		0.05.wait;
@@ -423,24 +447,122 @@ Tdef(\rgbFade, {
 Tdef(\rgbHueOscillate, {
 	loop {
 		~globalHue = (~globalHue + 0.0005) % 0.999;
+		~globalHue.postln;
 		0.05.wait;
 	};
-});
+}).stop;
 
+(
 Tdef(\rgbFade8, {
-	var sp = rrand(10, 20);
-	Tdef(\rgbHueOscillate).play;
+	var sp = rrand(60, 100);
+	//Tdef(\rgbHueOscillate).play;
 	inf.do {|i|
-		var c1 = Color.hsv(~globalHue, 1, 1 - ((i%sp)/(sp-1)));
-		var c2 = Color.hsv(~globalHue, 1, ((i%sp)/(sp-1)));
-		//~pars8[(i/15)%7].color(0, 255 - (((i%15)/14) * 255), 0);
-		//~pars8[((i/15)+1)%7].color(0, (((i%15)/14) * 255), 0);
-		~pars8[(i/sp)%7].color(c1.red*255, c1.green*255, c1.blue*255);
-		~pars8[((i/sp)+1)%7].color(c2.red*255, c2.green*255, c2.blue*255);
+		var c1 = Color.hsv(
+			~globalHue, 1, 1 - ((i%sp)/(sp-1)));
+		var c2 = Color.hsv(
+			~globalHue, 1, ((i%sp)/(sp-1)));
+
+		~pars8[(i/sp)%7].color(
+			c1.red*255, c1.green*255, c1.blue*255);
+		~pars8[((i/sp)+1)%7].color(
+			c2.red*255, c2.green*255, c2.blue*255);
 		~controller.send;
-		0.05.wait;
+		0.01.wait;
 	}
-});
+}).stop;
+);
+
+(
+Tdef(\rgbFade111, {
+	var sp = rrand(500, 100);
+	//Tdef(\rgbHueOscillate).play;
+	inf.do {|i|
+		var c1 = Color.hsv(
+			~globalHue, 1, 1 - ((i%sp)/(sp-1)));
+		var c2 = Color.hsv(
+			~globalHue, 1, ((i%sp)/(sp-1)));
+
+		~pars[(i/sp)%8].color(
+			c1.red*255, c1.green*255, c1.blue*255);
+		~pars[((i/sp)+1)%8].color(
+			c2.red*255, c2.green*255, c2.blue*255);
+		~controller.send;
+		0.01.wait;
+	}
+}).stop;
+);
+
+(
+Tdef(\rgbFadeSametime111, {
+	var sp = rrand(30, 10);
+	loop {
+		127.do { |j|
+			var shade = j * 2;
+			~pars.do {|par,i|
+				var c1 = Color.hsv(
+					~globalHue, 1, 1 - (shade/255));
+				par.color(c1.red*255, c1.green*255, c1.blue*255);
+			};
+			~controller.send;
+			0.01.wait;
+		};
+		127.do { |j|
+			var shade = 255 - (j * 2);
+			~pars.do {|par,i|
+				var c1 = Color.hsv(
+					~globalHue, 1, 1 - (shade/255));
+				par.color(c1.red*255, c1.green*255, c1.blue*255);
+			};
+			~controller.send;
+			0.01.wait;
+		}
+	};
+
+}).stop;
+);
+
+~possibleHues = [ 0.96, 0.4, 0, 0.666, 1 ];
+
+(
+Tdef(\rgbPickOneFollow111, {
+	var leader_color = ~possibleHues.choose;
+	loop {
+		var leader = ~pars.choose;
+		var others = ~pars.reject {|par| par == leader };
+		var others_color = leader_color;
+		leader_color = ~possibleHues.choose;
+		127.do { |j|
+			var shade = j * 2;
+			var cl = Color.hsv(leader_color, 1, 1-(shade/255));
+			others.do {|par,i|
+				var c1 = Color.hsv(
+					others_color, 1, 1 - (shade/255));
+				par.color(c1.red*255, c1.green*255, c1.blue*255);
+			};
+			leader.color(cl.red*255, cl.green*255, cl.blue*255);
+			~controller.send;
+			0.05.wait;
+		};
+	};
+}).stop;
+);
+
+
+(
+Tdef(\rgbChange111Color, {
+	~possibleHues = [ 0.96, 0.4, 0, 0.666, 1 ];
+	inf.do {
+		~globalHue = ~possibleHues.choose;
+		rrand(100.0, 240.0).wait;
+	};
+}).stop;
+);
+
+~globalHue=0.96;
+
+
+
+
 
 // 1000.collect{|i|120-((i*0.01 + ((2*5)*0.1)).sin.abs*120)}.plot
 
@@ -466,7 +588,7 @@ Tdef(\rgbFadeColors, {
 		~controller.send;
 		0.05.wait;
 	}
-}).play;
+}).stop;
 
 Tdef(\dialog, {
 	loop {
@@ -478,27 +600,30 @@ Tdef(\dialog, {
 			~mhx25_1.shutter(10.rand);
 			~mhx25_2.rotX(540.rand);
 			~mhx25_2.rotY(270.rand);
-			~mhx25_1.shutter(10.rand);
+			~mhx25_2.shutter(10.rand);
 			~controller.send;
 			rrand(0.2,3.0).wait;
 		};
 
-		~mhx25_1.rotX(270);
+		/*~mhx25_1.rotX(270);
 		~mhx25_1.rotY(135);
 		~mhx25_2.rotX(270);
 		~mhx25_2.rotY(135);
+		*/
+
 		~controller.send;
 		1.wait;
 		~mhx25_1.shutter(rrand(89, 95));
 		~mhx25_2.shutter(rrand(89, 95));
 		~controller.send;
 		rrand(1,6).wait;
-		~mhx25_1.off;
-		~mhx25_2.off;
+		~mhx25_1.shutterClose.value;
+		~mhx25_2.shutterClose.value;
 		~controller.send;
 		rrand(10, 60).wait;
 	};
-});
+}).stop;
+
 
 Tdef(\pargroups, {
 	100.do {|i|
@@ -522,6 +647,7 @@ Tdef(\pargroups, {
 	}
 });
 
+
 (
 Tdef(\explorer, {
 	i = 0;
@@ -529,10 +655,10 @@ Tdef(\explorer, {
 	{
 			var z;
 			z = if ((i % 2) == 0, { 0 },{ 540 });
-			if (i > 10, { ~mhx25_1.on; },{});
-			if (i > 20, { ~mhx25_1.off; },{});
-			if (i > 10, { ~mhx25_2.on; },{});
-			if (i > 20, { ~mhx25_2.off; },{});
+			if (i > 10, { ~mhx25_1.shutterOpen; },{});
+			if (i > 20, { ~mhx25_1.shutterClose; },{});
+			if (i > 10, { ~mhx25_2.shutterOpen; },{});
+			if (i > 20, { ~mhx25_2.shutterClose; },{});
 			~mhx25_1.rotSpeed(i * 4);
 			~mhx25_1.rotX(z);
 			~mhx25_1.rotY(i * 10);
@@ -544,13 +670,13 @@ Tdef(\explorer, {
 			i = i+1;
 	});
 
-});
+}).stop;
 );
 
 (
 Tdef(\mhxdance, {
 	// a couple of sequences, independent and independent after each other
-	var delay = 3;
+	var delay = 10;
 	loop {
 		~mhxs.do {|mhx|
 			mhx.rotX(0);
@@ -592,7 +718,6 @@ Tdef(\mhxdance, {
 					mhx.rotX(randx);
 					mhx.rotY(randy);
 				};
-
 				~controller.send;
 				delay.wait;
 				i = i+1;
@@ -618,7 +743,7 @@ Tdef(\perfMode, {
 		"... next player".postln;
 		Tdef.all.reject({|t| t.key == \perfMode}).do { |t| t.stop; };
 		0.2.wait;
-		~mhxs.do { |m| m.on; m.dim(100); };
+		~mhxs.do { |m| m.shutterOpen; m.dim(100); };
 		Tdef(\startTheAlarm).play;
 		Tdef(\movingHeadsGoNuts).play;
 		6.wait;
@@ -626,7 +751,7 @@ Tdef(\perfMode, {
 		Tdef(\movingHeadsGoNuts).stop;
 		~globalHue = rrand(0.0, 0.99999);
 		Tdef(~ledmodes.choose).play;
-		~mhxs.do { |m| m.on; m.dim(100); m.color(\white); };
+		~mhxs.do { |m| m.shutterOpen; m.dim(100); m.color(\white); };
 		((60 * 3)-6).wait;
 		Tdef(\dialog).stop;
 	};
@@ -640,6 +765,7 @@ Tdef(\perfMode, {
 	Tdef(\black).play;
 });
 
+
 Quant.default.quant = nil;
 
 Tdef(\startTheAlarm, {
@@ -648,7 +774,7 @@ Tdef(\startTheAlarm, {
 
 	~pars.do {|par|
 		par.strobe(rrand(215, 255));
-		c = [Color(rrand(125, 255), 0, 0), Color(0, rrand(125, 255), 0)][2.rand];
+		c = [Color(rrand(125, 255), 0, 0), Color(0, rrand(125, 255), 0)].choose;
 		par.color(c.red, c.green, c.blue);
 	};
 	~mhx25_1.color(\red);
@@ -667,12 +793,12 @@ Tdef(\startTheAlarm, {
 Tdef(\movingHeadsGoNuts, {
 	loop {
 		~mhxs.do {|m|
-			m.on;
+			m.shutterOpen;
 			m.rotSpeed(100);
 			m.rotX(rrand(0, 100));
 			m.rotY(rrand(0, 50));
 		};
-		rrand(0.4, 1.4).wait;
+		rrand(1, 2.4).wait;
 		~controller.send;
 		~mhxs.do {|m|
 			m.rotSpeed(100);
@@ -682,12 +808,12 @@ Tdef(\movingHeadsGoNuts, {
 		rrand(0.4, 1.4).wait;
 		~controller.send;
 	};
-});
+}).stop;
 
 Tdef(\black, {
 	Tdef.all.do {|t| t.stop };
 	~pars.do {|p|p.color(0,0,0)};
-	~mhxs.do {|m|m.rotX(540 / 2); m.rotY(270/2); m.on; m.color(\white); m.shutter(rrand(50,70))};
+	~mhxs.do {|m|m.rotX(540 / 2); m.rotY(270/2); m.shutterOpen; m.color(\white); m.shutter(rrand(50,70))};
 	~controller.send;
 });
 
@@ -701,7 +827,7 @@ Tdef(\tryingToBeOrganic, {|envir|
 		var x2 = x + rrand(-15, 15);
 		var y2 = y + rrand(-15, 15);
 
-		//~mhx25_1.on;
+		//~mhx25_1.shutterOpen;
 		//~mhx25_1.color(~mhx25_1.colorDict.keys.choose);
 
 		~mhx25_1.rotX(x);
@@ -729,7 +855,7 @@ Tdef(\tryingToBeOrganic, {|envir|
 			~controller.send;
 			0.4.rand.wait;
 		};
-		~mhx25_1.off; ~controller.send;
+		~mhx25_1.shutterClose; ~controller.send;
 		10.rand.wait;
 	};
 });
@@ -744,7 +870,7 @@ Tdef(\ping, {
 	~mhxs.do {|l|
 		l.rotX(255.rand);
 		l.rotY(255.rand);
-		l.on;
+		l.shutterOpen;
 	};
 	~controller.send;
 	1.wait;
@@ -755,24 +881,76 @@ Tdef(\ping, {
 	~mhxs.do {|l|
 		l.rotX(0);
 		l.rotY(0);
-		l.off;
+		l.shutterClose;
 	};
 	~controller.send;
 }).play;
 );
 
+Tdef(\fog, {
+	loop {
+		~fog1.fog(0);
+		rrand(60*3.0, 60*6).wait;
+		~fog1.fog(rrand(0.5, 1.0));
+		rrand(60*3, 60*6).wait;
+	};
+}).play;
+Tdef.all.do {|t| t.stop};
+~globalHue = 0.95;
 
-~ledmodes = [\rgbFadeColors, \rgbFade8, \rgbStrobe];
+
+(
+Tdef(\rot, {
+	inf.do { |i|
+		~mhxs.do { |m|
+			m.shutterOpen;
+			//m.color(m.colorDict.keys.choose);
+			m.rotX(270.rand);
+			m.rotSpeed(5);
+
+			m.rotY(53+50.rand);
+			m.gobo(\redDot); //);m.goboDict.keys.choose.postln);
+			//m.gobo(m.goboDict.keys.choose.postln);
+			m.goboRot([68, 152][i%2]);
+			m.shutterOpen;
+			m.dim(60);
+		};
+		if (0.3.coin, {
+			~mhx25_1.rotY(57 + rrand(-50, 50));
+			~mhx25_1.rotX(353 + rrand(-50, 50));
+		}, {
+			~mhx25_1.color(\violet);
+			~mhx25_1.rotY(57);
+			~mhx25_1.rotX(353);
+		});
+
+		if (0.3.coin, {
+			~mhx25_2.rotY(42 + rrand(-50, 50));
+			~mhx25_2.rotX(45 + rrand(-50, 50));
+		}, {
+			~mhx25_2.color(\darkBlue);
+			~mhx25_2.rotY(42);
+			~mhx25_2.rotX(45);
+		});
+
+		~controller.send;
+		6.wait;
+	}
+}).play;
+);
+
+//~ledmodes = [\rgbFadeColors, \rgbFade8, \rgbStrobe];
+~ledmodes = [\rgbPickOneFollow111, \rgbFadeSametime111, \rgbFade111];
 ~modes = [\explorer, \tryingToBeOrganic, \mhxdance, \dialog, \ping];
 Tdef(\master, {
-	var mode = ~modes.choose;
+	var mode = ~ledmodes.choose;
 	2.wait;
 	loop {
-		~mhxs.do {|l| l.dim(~globalDim) }; ~controller.send;
-		("New mode is: " ++ mode).postln;
+		//~mhxs.do {|l| l.dim(~globalDim) }; ~controller.send;
 		Tdef(mode).stop;
-		mode = ~modes.choose;
-		Tdef(mode).set(\repeats, 10.rand);
+		mode = ~ledmodes.choose;
+		("New mode is: " ++ mode).postln;
+		//Tdef(mode).set(\repeats, 10.rand);
 		Tdef(mode).play;
 		"Waiting for .... ".post;
 		(100 + 100.rand).postln.wait;
