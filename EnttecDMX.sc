@@ -70,7 +70,7 @@ EnttecDMX {
 		} {
 			vals.do ({|theval, i|
 				if(theval <= 1.0) {
-					serial_packet[ch1_idx + i] = (theval * brightness * 255.0).asInt;
+					serial_packet[ch1_idx + i] = (theval * brightness * 255.0).asInteger;
 				}
 			});
 			//("Sending packet "+serial_packet).postln;
