@@ -58,7 +58,7 @@ we define a specific time window of 5 second
 (
 Ndef(\sin, 	{
 	arg freqzz = 0.1, freqzz2 = 0.2;
-	var freq = LFDNoise0.ar([freqzz, freqzz2]).exprange(0, 68).midicps;
+	var freq = LFDNoise0.ar([freqzz, freqzz2]).exprange(20,15000);
 	//var freq
 	var niceTone = SinOsc.ar(freq);
 
