@@ -1,7 +1,7 @@
 
 
 // 1. type your own user name
-~user = \fang;
+~user = \username;
 
 
 // 2. connect to SyncText
