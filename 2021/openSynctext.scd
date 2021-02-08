@@ -7,9 +7,9 @@
 // 2. connect to SyncText
 (
 ~router = OSCRouterClient(~user);
-~router.join
-~sync = SyncText(\dojoTest, ~router.userName, ~router)
-~sync.showDoc
+~router.join;
+~sync = SyncText(\dojoTest, ~router.userName, ~router);
+~sync.showDoc;
 )
 
 
