@@ -1,4 +1,4 @@
-~user = \fang;
+~user = \username;
 
 ~router = OSCRouterClient(~user);
 
