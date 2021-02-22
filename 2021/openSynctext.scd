@@ -12,6 +12,6 @@
 ~sync.showDoc;
 )
 
-
-
+// 3. check connectivity
+~router.peers.postln;
 
