@@ -13,6 +13,6 @@ b = NetAddr.new("127.0.0.1", 57120);    // create the NetAddr
 b.sendMsg("/filter", "there");
 OSCFunc.trace(true);
 
-
+NetAddr("192.168.0.4",1337) .sendMsg('/filter',120,120)
 //this is new
 
