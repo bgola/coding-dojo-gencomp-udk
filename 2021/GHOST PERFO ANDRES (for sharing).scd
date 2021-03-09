@@ -4,7 +4,7 @@
 
 // This patch takes a set of recorded sounds and plays them in two ways
 // 1) a continous sound that is modified by the position in the scren (x, y mouse axis)
-// 2) certain patterns produced with the same sound files. There are 4 patterns. Different patterns should be triggered depending on the position of the mouse on the screen (still in development)
+// 2) certain patterns produced with the same sound files. There are 4 patterns. Different patterns should be triggered depending on the position of the mouse on the screen
 
 
 
@@ -32,7 +32,7 @@ d[\wind][1].play;
 ///////////////// 1. Continuous sound ////////////////////
 
 
-
+(
 // Ndef granular synthesizer
 
 (
@@ -83,10 +83,10 @@ Ndef(\grainwind).addSpec(\panHz, [0, 40]);
 
 
 ///// LFO (to control the pitch of the sound (or any other parameter you want)
-
+(
 (
 Ndef(\windLfo1, {
-	arg freq=1, min=0, max=4;
+	arg freq=1, min=0.01, max=4;
 	var sig;
 	sig = SinOsc.ar(freq).range(min, max)
 });
@@ -100,9 +100,9 @@ Ndef(\windLfo1).addSpec(\max, [0, 4], \min, [0, 4]);
 
 (
 Ndef(\mouseX, {
-	arg min=0.01, max=0.5, warp=1;
+	arg min=0.01, max=0.5, warp=0;
 	var sig;
-	sig = MouseX.kr(min, max, warp);
+	sig = MouseX.kr(min, max, warp, 0);
 });
 Ndef(\mouseX).addSpec(\min, [0.01, 20000, \exp]);
 Ndef(\mouseX).addSpec(\max, [0.01, 20000, \exp]);
@@ -113,7 +113,7 @@ Ndef(\mouseX).addSpec(\warp, [0, 1, \lin, 1]);
 Ndef(\mouseY, {
 	arg min=0.01, max=100, warp=1;
 	var sig;
-	sig = MouseY.kr(min, max, warp);
+	sig = MouseY.kr(min, max, warp, 0);
 });
 Ndef(\mouseY).addSpec(\min, [0.01, 20000, \exp]);
 Ndef(\mouseY).addSpec(\max, [0.01, 20000, \exp]);
@@ -125,22 +125,22 @@ Ndef(\mouseY).addSpec(\warp, [0, 1, \lin, 1]);
 Ndef(\mouseYvol, {
 	arg min=1.0, max=0.2, warp=1;
 	var sig;
-	sig = MouseY.kr(min, max, warp);
+	sig = MouseY.kr(min, max, warp, 0);
 });
 Ndef(\mouseY).addSpec(\min, [0.01, 20000, \exp]);
 Ndef(\mouseY).addSpec(\max, [0.01, 20000, \exp]);
 Ndef(\mouseY).addSpec(\warp, [0, 1, \lin, 1]);
 );
-
+);
 
 /////// Settings
-
+(
 //mapping the grain duration to mouse Y
 Ndef(\grainwind).map(\graindur, Ndef(\mouseY));
 Ndef(\mouseY).set(\min, 0.001, \max, 0.5);
 //to balance the volume
 Ndef(\grainwind).map(\vol, Ndef(\mouseYvol));
-Ndef(\mouseYvol).set(\min, 1.0, \max, 0.2);
+Ndef(\mouseYvol).set(\min, 0.8, \max, 0.15);
 
 
 // Mapping the LFO to the rate
@@ -150,7 +150,7 @@ Ndef(\windLfo1).set(\min, 0.5, \max, 0.6);
 // then mapping the mouse to the frequency of that LFO
 Ndef(\windLfo1).map(\freq, Ndef(\mouseX));
 // choose the range of the mouse
-Ndef(\mouseX).set(\min, 2,\max,0.01);
+Ndef(\mouseX).set(\min, 2,\max,0.1);
 
 // other settings
 Ndef(\grainwind).set(
@@ -158,29 +158,33 @@ Ndef(\grainwind).set(
 	\pos, 0,
 	\speedpos, 0.03
 );
+);
+Ndef(\grainwind).play;
 
+/*
 // GUI to play and mix the NDEF!
 NdefMixer(s);
+*/
 
 
 ///////////////// 2. Triggered compositions ////////////////////
 
-// This section is still under construction --> to be done: mechanism that triggers composition depending on mouse position.
+
 
 
 // SynthDef
 
 (
 SynthDef(\bufwind, {
-	arg buf, rate = 1, vol = 1, spd = 1, pan= 0, gate=1, atk=0.1, rel=0.1, curve=(-4), out=0, startpos=0, loop=0;
+	arg buf, rate = 1, amp = 1, spd = 1, pan= 0, gate=1, atk=0.1, rel=0.1, curve=(-4), out=0, startpos=0, loop=0;
 	var sig, env;
 	env = EnvGen.ar(Env.perc(atk,rel, curve: curve), gate: gate, doneAction:2);
 	sig = PlayBuf.ar(1, buf, rate* BufRateScale.ir(buf), 1, startpos * BufFrames.ir(buf), loop, doneAction: 2);
-	sig = sig * env * vol;
+	sig = sig * env * amp;
 	sig = Pan2.ar(sig, pan);
 	Out.ar(out, sig);
 }).add
-)
+);
 
 
 
@@ -211,14 +215,10 @@ Pdef(
 		\loop, 1,
 		\atk, 2,
 		\rel, 4,
-		\amp, Pseq([
-			Pseq([0.2], 7),
-			Pseq([0.3], 5)
-		], inf),
-		\pan, Pseq([
-			Pwhite(-0.2, 0.2, 6),
-			Pwhite(-0.2, 0.2, 1),
-			Pwhite(-0.5, 0.5, 1),
+		\amp, Pwhite(0.6, 0.7, inf),
+		\pan, Pxrand([
+			Pwhite(-0.8, -0.3, 1),
+			Pwhite(0.3, 0.8, 1)
 		], inf),
 		\out, 0,
 	)
@@ -258,12 +258,11 @@ Pdef(
 		\rel, Pseq([
 			Pwhite(0.5, 1.0, 4),
 			Pwhite(8, 10, 8)
-		]),
-		\amp, 0.1,
-		\pan, Pseq([
-			Pwhite(-0.2, 0.2, 6),
-			Pwhite(-0.2, 0.2, 1),
-			Pwhite(-0.5, 0.5, 1),
+		], inf),
+		\amp, Pwhite(0.35, 0.45),
+		\pan, Pxrand([
+			Pwhite(-0.8, -0.3, 1),
+			Pwhite(0.3, 0.8, 1)
 		], inf),
 		\out, 0,
 	)
@@ -302,13 +301,10 @@ Pdef(
 		\loop, 1,
 		\atk, 0.1,
 		\rel, 0.1,
-		\amp, Pseq([
-			Pseq([0.2], 32),
-			Pseq([0.3], 16)
-		], inf),
-		\pan, Pseq([
-			Pwhite(-0.2, 0.2, 32),
-			Pbrown(-1, 1, 0.1, 16)
+		\amp,  Pwhite(0.6, 0.7, inf),
+		\pan, Pxrand([
+			Pwhite(-0.8, -0.3, 1),
+			Pwhite(0.3, 0.8, 1)
 		], inf),
 		\out, 0,
 	)
@@ -348,18 +344,12 @@ Pdef(
 		], inf),
 		\startpos,Pwhite(0, 0.9, inf),
 		\loop, 1,
-		\atk, Pseq([
-			Pseries(0.1, 0.01, 20),
-			Pseries(0.3, -0.01, 20),
-		], inf),
+		\atk, Pbrown(0.1, 0.2, 0.01, inf),
 		\rel, 0.1,
-		\amp, Pseq([
-			Pseq([0.01], 32),
-			Pseq([0.05], 16)
-		], inf),
-		\pan, Pseq([
-			Pwhite(-0.2, 0.2, 32),
-			Pbrown(-1, 1, 0.1, 16)
+		\amp, Pwhite(0.35, 0.45),
+		\pan, Pxrand([
+			Pwhite(-0.8, -0.3, 1),
+			Pwhite(0.3, 0.8, 1)
 		], inf),
 		\out, 0,
 	)
@@ -371,3 +361,92 @@ play or stop!
 Pdef(\upright).play;
 Pdef(\upright).stop;
 */
+
+
+// To trigger compositions!!
+
+
+
+(
+
+Mouse(\showPosition, { |mouse, xval, yval, xraw, yraw|
+	var xV, yV, switch;
+	// first to see if if we are on one side or another side of x and y
+	if(xval < 0.5){
+		xV = false;};
+	if(xval >= 0.5){
+		xV = true;};
+	if(yval < 0.5){
+		yV = true;};
+	if(yval >= 0.5){
+		yV = false;};
+
+
+	// For upper right corner
+	if( (xV==true).and(yV==true)){
+
+		if(~switch != 1){
+
+		~switch = 1;
+
+		("up right").postln;
+			Pdef(\upright).play;
+			Pdef(\upleft).stop;
+			Pdef(\downright).stop;
+			Pdef(\downleft).stop;
+		};
+	};
+	// down right
+	if( (xV==true).and(yV!=true)){
+
+		if(~switch != 2){
+
+		~switch = 2;
+
+		("down right!").postln;
+			Pdef(\upright).stop;
+			Pdef(\upleft).stop;
+			Pdef(\downright).play;
+			Pdef(\downleft).stop;
+		};
+	};
+	//up left
+		if( (xV!=true).and(yV==true)){
+
+		if(~switch != 3){
+
+		~switch = 3;
+
+		("up left").postln;
+			Pdef(\upright).stop;
+			Pdef(\upleft).play;
+			Pdef(\downright).stop;
+			Pdef(\downleft).stop;
+		};
+	// down left
+
+	};
+		if( (xV!=true).and(yV!=true)){
+
+		if(~switch != 4){
+
+		~switch = 4;
+
+		("down left").postln;
+			Pdef(\upright).stop;
+			Pdef(\upleft).stop;
+			Pdef(\downright).stop;
+			Pdef(\downleft).play;
+		};
+	};
+
+
+});
+);
+/* to free the mouse!
+
+Mouse(\showPosition).free;
+
+*/
+
+);
