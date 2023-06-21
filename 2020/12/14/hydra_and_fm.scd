@@ -13,10 +13,8 @@ GOAL
   -
 
 - Hydra
-  -
-
-
-
+  - feedback
+  - react with fft
 */
 
 
@@ -31,7 +29,7 @@ Ndef(\synth, {
 	var freq = Ndef(\synthmelo).kr;
 	var mod = Ndef(\synthmod).ar;
 	sig = EnvGen.ar(Env.perc, Ndef(\gate).kr)  * SinOsc.ar(freq*mod, mul: vol)!2
-}).stop
+})
 )
 
 // harmony
@@ -41,11 +39,8 @@ Ndef(\harmony, {
 	var freq = Ndef(\synthmelo).kr * Ndef(\harmsel).kr;
 	var gate = PulseDivider.kr(Ndef(\gate).kr, 4);
 	sig = SinOsc.ar(Latch.kr(freq, gate)) !2
-}).play
+}).play;
 )
-
-
-
 
 // harmony sleector
 (
@@ -111,18 +106,19 @@ Ndef(\panner, { arg speed=6;
 
 Ndef(\master, {
 	\in.ar(0!2);
-});
+}).play;
 )
 
 Ndef(\reverb) <<> nil //Ndef(\synth)
 
-
+(
 Ndef(\master) <<> nil ;
 Ndef(\panner) <<> nil;
 Ndef(\tremolo) <<> nil;
 Ndef(\reverb) <<> nil;
 
 Ndef(\master) <<> Ndef(\reverb) <<> Ndef(\panner) <<> Ndef(\synth)
+);
 
 NdefMixer(s)
 
