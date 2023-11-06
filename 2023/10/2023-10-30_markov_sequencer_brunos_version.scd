@@ -88,7 +88,7 @@ Ndef(\readABuffer, {arg glide=0.001, octave=4;
 	step = Ndef(\readABuffer2).ar(1);
 
 	// Read the step value from the valuesBuffer
-	sequencerValue = BufRd.ar(1, ~valuesBuffer, step);
+	sequencerValue =  BufRd.ar(1, ~valuesBuffer, step);
 	// Latch is the same as Sample & Hold:
 	// it will lock its value when it receives a trig. it is important, in case we are changing values
 	// in the ~valuesBuffer
@@ -134,8 +134,8 @@ Ndef(\readABuffer, {arg glide=0.001, octave=4;
 Ndef(\readABuffer).play
 
 // play with different values for the synthesis
-Ndef(\readABuffer).set(\glide, 0.01, \octave, 0, \bassLineProb, 0.3)
-Ndef(\freq).set(\freq, 9);
+Ndef(\readABuffer).set(\glide, 0.1, \octave, 1, \bassLineProb, 0.5, \fb, 0.2)
+Ndef(\freq).set(\freq, 3.4);
 
 // change the sequence values to some random numbers/notes
 ~valuesBuffer.set(*(~numberOfSteps.collect {|i| [i, 12.0.rand]}).flatten)
@@ -143,7 +143,7 @@ Ndef(\freq).set(\freq, 9);
 // change the probability matrix and sets it again (run this block a few times):
 (
 ~probMatrix[~numberOfSteps.rand][~numberOfSteps.rand] = 1.0.rand;
-Ndef(\readABuffer2).set(\probMatrix, a);
+Ndef(\readABuffer2).set(\probMatrix, ~probMatrix);
 );
 
 // Editable plot to change values of the buffer
