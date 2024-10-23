@@ -17,24 +17,14 @@ glitch_live = (frame) => {
 		const height = fwd_mvs.height;
 		const width = fwd_mvs.width;
 		const spinspeed = 4*sine;
+		let switchvariable
 		fwd_mvs.forEach((mv, row, col) => {
-			const magnitude = mv.magnitude()
-			const heightMiddle = height/2;
-			// calculate how much to shift each column:
-			// begin with half height for left, 
-			// and go down to -half height on right.
-
-			if (row >= heightMiddle) {
-				let shiftX = fwd_mvs.height / 2 - row;
-				mv[0] += shiftX * spinspeed;
-				let shiftY = fwd_mvs.width / 2 - col;
-				mv[1] -= shiftY * spinspeed;
-			} else {
-				let shiftX = fwd_mvs.height / 2 - row;
-				mv[0] -= shiftX * spinspeed;
-				let shiftY = fwd_mvs.width / 2 - col;
-				mv[1] += shiftY * spinspeed;
+			if (Math.random () > 0) {
+				switchvariable = mv[1]
+				mv[1]= mv[0]
+				mv[0]= switchvariable
 			}
+		
 		})
 	}
 }
