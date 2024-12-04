@@ -91,8 +91,8 @@ Tdef(\autoScratch, { arg ev;
 		if (Ndef(\scratch).get(\playback) < 1) {
 			Ndef(\scratch).set(
 				\offset, b.numFrames.rand,
-				\scratchLength, rrand(0.1,2),
-				\lagtime, rrand(0.01,0.8),
+				\scratchLength, rrand(0.8,2),
+				\lagtime, rrand(0.1,0.2),
 			);
 		};
 		1.0.rand.wait;
