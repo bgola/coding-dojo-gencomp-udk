@@ -21,7 +21,7 @@ Coding dojo
 // create a buffer and fill it with some sine waves
 (
 b = Buffer.alloc(s, 2048, 1);
-g = Signal.sineFill(2048, [7,0.5,2,19], [0]);
+g = Signal.sineFill(2048, [1], [0]);
 b.loadCollection(g);
 /*
 b.plot;
@@ -44,35 +44,40 @@ Ndef(\pulsar).addSpec(\formfreq3, [20, 20000, \exp]);
 Ndef(\pulsar).addSpec(\curve3, [-10, 10, \lin]);
 Ndef(\pulsar).addSpec(\amp3, \amp);
 Ndef(\pulsar).addSpec(\pan3, \pan);
+Ndef(\pulsar).addSpec(\modamount, [0,1]);
 
 
 // make an Ndef that does pulsar synthesis
 (
 // amp has to be first for NTMI
 Ndef(\pulsar, { |amp = 1,
-    fundfreq = 10,
-    formfreq1 = 100, curve1= -4, pan1 = 0, amp1= 1,
-    formfreq2 = 100, curve2= -4, pan2 = 0, amp2= 1,
-    formfreq3 = 100, curve3= -4, pan3 = 0, amp3= 2
-    |
-    var trig, pulseReader, bufferOutput, shapes, envelope, unpanned;
-    var formfreqs = [formfreq1,formfreq2,formfreq3];
-    var curves = [curve1, curve2, curve3];
-    var pans = [pan1, pan2, pan3];
-    var amps = [amp1, amp2, amp3];
-    var pulseDur = 1/formfreqs.clip(fundfreq,20000);
+	fundfreq = 10,
+	formfreq1 = 100, curve1= -4, pan1 = 0, amp1= 1,
+	formfreq2 = 100, curve2= -4, pan2 = 0, amp2= 1,
+	formfreq3 = 100, curve3= -4, pan3 = 0, amp3= 2,
+	modamount=0
+	|
+	var trig, pulseReader, bufferOutput, shapes, envelope, unpanned, snd;
+	var formfreqs = [formfreq1,formfreq2,formfreq3];
+	var curves = [curve1, curve2, curve3];
+	var pans = [pan1, pan2, pan3];
+	var amps = [amp1, amp2, amp3];
+	var fb = LocalIn.ar(1);
+	var pulseDur = 1/formfreqs.clip(fundfreq,20000) + (fb * modamount);
 
-// generate a trigger signal for the pulsar waveform playback
-    trig = Impulse.ar(fundfreq);
-    pulseReader = EnvGen.ar(Env([0, 1, 0], [pulseDur, 0]), trig);
+	// generate a trigger signal for the pulsar waveform playback
+	trig = Impulse.ar(fundfreq);
+	pulseReader = EnvGen.ar(Env([0, 1, 0], [pulseDur, 0]), trig);
 
-    // Envelope for the waveform
-    envelope = EnvGen.ar(Env.perc(0, pulseDur, curve: curves), trig);
+	// Envelope for the waveform
+	envelope = EnvGen.ar(Env.perc(0, pulseDur, curve: curves), trig);
 
-    bufferOutput = BufRd.ar(1, b.bufnum,
-        pulseReader * BufFrames.ir(b.bufnum),
-        0);
-    Mix.ar(Pan2.ar(bufferOutput * envelope, pans, amps));
+	bufferOutput = BufRd.ar(1, b.bufnum,
+		pulseReader * BufFrames.ir(b.bufnum),
+		0);
+	snd = Mix.ar(Pan2.ar(bufferOutput * envelope, pans, amps));
+	LocalOut.ar(snd.sum);
+	snd;
 });
 );
 );
@@ -84,8 +89,7 @@ fork { 0.3.wait; Ndef(\pulsar).end };
 /* Preset tests:
 
 p = NdefPreset(Ndef(\pulsar));
-NdefPresetGui(p, 16);
+NdefPresetGui(p, 20);
 
 p.setRand(1.0)
 */
-
