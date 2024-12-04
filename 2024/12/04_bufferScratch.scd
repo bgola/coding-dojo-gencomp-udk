@@ -4,6 +4,11 @@ Buffer scrubbing in the style of vynil scratch simulation.
 Using a Buffer that we load from the file system and use control parameters or mouse to set position and amplitude.
 */
 
+
+
+// Boot the server!
+s.boot;
+
 // Choose a .wav file
 //        you can also use:
 // b = Buffer.loadDialog;
@@ -17,7 +22,7 @@ Ndef(\scratch).addSpec(\lagtime, [0, 1]);
 Ndef(\scratch).addSpec(\playback, [0, 1, \lin, 1]);
 
 Ndef(\scratch, {
-	arg pos = 0, scratchLength = 0.4, offset = 0, lagtime = 0.1, playback=1;
+	arg pos = 0, scratchLength = 0.4, offset = 0, lagtime = 0.1, playback=0;
 	// PlayBuf.ar(b.numChannels, b.bufnum, 1.0)
 	var phs = Phasor.ar(0, playback, 0, b.numFrames);
 	var apos = (phs + K2A.ar((pos).lag(lagtime)));
@@ -29,8 +34,8 @@ Ndef(\scratch, {
 			* b.sampleRate))
 	// Envelope so it only sounds if playback is on or
 	// if we change the position (scratch)
-	* ((playback | Changed.kr(pos)).lag(0.1) > 0)
-}).play;
+	* ((playback | Changed.kr(pos,0)).lag(0.02) > 0)
+}).play.gui;
 )
 
 (
@@ -64,11 +69,15 @@ Tdef(\autoScratch, {
 
 (
 // autoscratch with multiple points
-Tdef(\autoScratch, {
+Tdef(\autoScratch).set(\maxloops, 300);
+Tdef(\autoScratch).set(\maxpoints, 20);
+Tdef(\autoScratch).addSpec(\maxpoints, [2,100,\lin,1]);
+Tdef(\autoScratch).addSpec(\maxloops, [10,100,\lin,1]);
+Tdef(\autoScratch, { arg ev;
 	loop {
-		var points = rrand(2,10).collect {1.0.rand};
+		var points = rrand(2,ev.maxpoints).asInteger.collect {1.0.rand};
 		var intervals = (points.size - 1).collect { 1.0.rand }.normalizeSum;
-		var nloops = 100.rand;
+		var nloops = ev.maxloops.rand.asInteger;
 		nloops.do {|idx|
 			var normIdx = idx/nloops;
 			var currentSlice = (normIdx * (points.size-1)).floor.asInteger;
@@ -78,7 +87,7 @@ Tdef(\autoScratch, {
 			Ndef(\scratch).set(\pos, current);
 			(intervals[currentSlice] * (0.05.rand * points.size)).wait;
 		};
-		1.0.wait;
+		1.0.rand.wait;
 		if (Ndef(\scratch).get(\playback) < 1) {
 			Ndef(\scratch).set(
 				\offset, b.numFrames.rand,
@@ -89,6 +98,7 @@ Tdef(\autoScratch, {
 		1.0.rand.wait;
 	}
 }).play;
+Tdef(\autoScratch).gui;
 )
 
 Ndef(\scratch).gui
