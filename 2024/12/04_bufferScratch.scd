@@ -25,7 +25,6 @@ Ndef(\scratch, {
 	arg pos = 0, scratchLength = 0.4, offset = 0, lagtime = 0.1, playback=0;
 	// PlayBuf.ar(b.numChannels, b.bufnum, 1.0)
 	var phs = Phasor.ar(0, playback, 0, b.numFrames);
-	var apos = (phs + K2A.ar((pos).lag(lagtime)));
 	BufRd.ar(b.numChannels,
 		b.bufnum,
 		(phs+offset) +
@@ -47,7 +46,6 @@ Tdef(\autoScratch, {
 	}
 }).play;
 )
-
 
 (
 // Auto scratch with pause
